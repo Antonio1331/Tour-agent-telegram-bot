@@ -43,8 +43,12 @@ class Database:
         return self.execute(sql, telegram_id, fetchone=True)
 
     def get_lang(self, telegram_id):
-        sql = '''SELECT lang FROM users WHERE telegram_id = ?'''
-        return self.execute(sql, telegram_id, fetchone=True)[0]
+        sql = "SELECT lang FROM users WHERE telegram_id = ?"
+        result = self.execute(sql, telegram_id, fetchone=True)
+        if result:
+            return result[0]
+        else:
+            return 'uz'
 
     def save_phone_number_and_full_name(self, full_name, phone_number, telegram_id):
         sql = '''UPDATE users SET full_name = ?, phone_number = ? WHERE telegram_id = ?'''
@@ -74,6 +78,10 @@ class Database:
         sql = f'''SELECT id, name_{lang} FROM travels'''
         return self.execute(sql, fetchall=True)
 
+    def select_travel_text(self, travel_id, lang):
+        sql = f'''SELECT name_{lang}, price, days FROM travels WHERE id = ?'''
+        return self.execute(sql, travel_id, fetchone=True)
+
     def select_travels_with_images(self, travel_id, lang):
         sql = f'''SELECT travels.id, travels.name_{lang}, images.id, images.image FROM travels JOIN images ON images.travel_id = travels.id WHERE travels.id = ?'''
         return self.execute(sql, travel_id, fetchall=True)
@@ -89,3 +97,11 @@ class Database:
     def insert_image(self, image: str, travel_id: int):
         sql = '''INSERT INTO images(image, travel_id) VALUES (?, ?)'''
         self.execute(sql, image, travel_id, commit=True)
+
+    def count_images(self, travel_id):
+        sql = '''SELECT count(id) FROM images WHERE travel_id = ?'''
+        return self.execute(sql, travel_id, fetchone=True)
+
+    def select_images_by_pagination(self, travel_id, offset, limit):
+        sql = '''SELECT id, image FROM images WHERE travel_id = ? LIMIT ?, ?'''
+        return self.execute(sql, travel_id, offset, limit, fetchone=True)

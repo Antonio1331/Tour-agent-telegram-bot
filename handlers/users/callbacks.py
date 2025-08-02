@@ -3,6 +3,7 @@ from data.loader import bot, db
 from config import TEXTS
 from keyboards.default import phone_button, make_buttons
 from keyboards.inline import travels_buttons
+from keyboards.inline import travel_pagination_buttons
 
 REGISTER = {}
 
@@ -61,4 +62,63 @@ def reaction_to_travel_(call: CallbackQuery):
     from_user_id = call.from_user.id
     travel_id = int(call.data.split("_")[-1])
     lang = db.get_lang(from_user_id)
-    print(db.select_travels_with_images(travel_id, lang))
+    image, markup = travel_pagination_buttons(travel_id)
+    bot.send_photo(chat_id, image, reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda call: "prev_image_" in call.data)
+def reaction_to_prev_image_(call: CallbackQuery):
+    chat_id = call.message.id
+    bot.delete_message(chat_id, call.message.message_id)
+    travel_id = int(call.data.split("_")[-1])
+    buttons = call.message.reply_markup.keyboard[0]
+    for button in buttons:
+        if button.callback_data == "current_page":
+            page = int(button.text.split("/")[0])
+
+    image, markup = travel_pagination_buttons(travel_id, page - 1)
+    bot.send_photo(chat_id, image, reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: "next_image_" in call.data)
+def reaction_to_next_image_(call: CallbackQuery):
+    chat_id = call.message.chat.id
+    bot.delete_message(chat_id, call.message.message_id)
+    travel_id = int(call.data.split("_")[-1])
+    buttons = call.message.reply_markup.keyboard[0]
+    for button in buttons:
+        if button.callback_data == "current_page":
+            page = int(button.text.split("/")[0])
+
+    image, markup = travel_pagination_buttons(travel_id, page + 1)
+    bot.send_photo(chat_id, image, reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: "info_" in call.data)
+def reaction_info(call: CallbackQuery):
+    chat_id = call.message.chat.id
+    from_user_id = call.from_user.id
+    lang = db.get_lang(from_user_id)
+    bot.delete_message(chat_id, call.message.message_id)
+    travel_id = int(call.data.split("_")[-1])
+    name, price, day = db.select_travel_text(travel_id, lang)
+    text = f'''
+<b>Nomi:</b> {name},
+<b>Narxi:</b> {price} so'm,
+<b>Davomiyligi:</b> {day} kun
+    '''
+    buttons = call.message.reply_markup.keyboard[0]
+    for button in buttons:
+        if button.callback_data == "current_page":
+            page = int(button.text.split("/")[0])
+
+    image, markup = travel_pagination_buttons(travel_id, page)
+    bot.send_photo(chat_id, image, caption=text, reply_markup=markup, parse_mode="html")
+
+@bot.callback_query_handler(func=lambda call: "to_back_" in call.data)
+def reaction_back_to_travel_(call: CallbackQuery):
+    chat_id = call.message.chat.id
+    bot.delete_message(chat_id, call.message.message_id)
+    from_user_id = call.from_user.id
+    lang = db.get_lang(from_user_id)
+    travels_list = db.select_travels(lang)
+    bot.send_message(chat_id, "-----------------",
+                     reply_markup=travels_buttons(travels_list))

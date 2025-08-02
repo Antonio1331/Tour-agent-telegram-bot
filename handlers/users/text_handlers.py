@@ -1,4 +1,6 @@
 from telebot.types import Message
+from telegram import InlineKeyboardMarkup
+
 from data.loader import bot, db
 from config import TEXTS
 from keyboards.default import make_buttons
@@ -45,3 +47,7 @@ def reaction_to_re_registration(message: Message):
     text = TEXTS[lang][1]
     msg = bot.send_message(chat_id, text)
     bot.register_next_step_handler(msg, get_name)
+
+def travel_pagination_buttons(page=1):
+    markup = InlineKeyboardMarkup()
+    count = None
